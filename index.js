@@ -65,7 +65,7 @@ function updateRemovedParents(id, relationshipTargetModel, childPath, pathValue,
     };
     updateVal.$pull[childPath] = id;
 
-    relationshipTargetModel.update(
+    /*relationshipTargetModel.update(
         query,
         updateVal, {
             multi: true
@@ -73,7 +73,8 @@ function updateRemovedParents(id, relationshipTargetModel, childPath, pathValue,
         function(err, result) {
             done(err);
         }
-    );
+    );*/
+    done();
 }
 
 module.exports = exports = function relationship(schema, options) {
@@ -163,7 +164,7 @@ module.exports = exports = function relationship(schema, options) {
         }
     });
 
-    schema.pre('save', true, function(next, done) {
+    var preSave = function(next, done) {
         var self = this;
         next();
 
@@ -189,9 +190,9 @@ module.exports = exports = function relationship(schema, options) {
                         callback);
                 }, done);
         });
-    });
+    }
 
-    schema.pre('remove', true, function(next, done) {
+    var preRemove = function(next, done) {
         var self = this;
         next();
         async.each(relationshipPaths,
@@ -199,7 +200,13 @@ module.exports = exports = function relationship(schema, options) {
                 self.updateCollectionForRelationship(path, self.get(path), 'remove', callback);
             },
             done);
-    });
+    };
+
+    schema.pre('save', true, preSave);
+    schema.pre('findOneAndUpdate',true,preSave);
+    schema.pre('findOneAndRemove',true,preRemove);
+    schema.pre('remove', true,preRemove);
+
 
     schema.method('updateCollectionForRelationship', function(relationshipPathName, relationshiptPathValue, updateAction, done) {
         var relationshipPathOptions = optionsForRelationship(this.schema.paths[relationshipPathName]);
